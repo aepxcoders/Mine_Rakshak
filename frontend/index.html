@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#06121d" />
+    <meta name="description" content="MineRakshak local ESP32 sensor test dashboard for mine rescue rover telemetry." />
+    <title>MineRakshak — Local ESP32 Test Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=4.2.0" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to dashboard</a>
+
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="rover-mark" aria-hidden="true">▱</div>
+        <div>
+          <h1>MineRakshak — Local ESP32 Test Dashboard</h1>
+          <p>Bench telemetry console · MRR-01</p>
+        </div>
+      </div>
+
+      <div class="header-status" aria-label="System status">
+        <div class="status-inline"><i id="headerOnlineDot"></i><b id="headerOnline">OFFLINE</b></div>
+        <div><span>Device ID</span><b>MRR-DEVICE-001</b></div>
+        <div><span>Last packet</span><b id="headerPacket">No data</b></div>
+        <div><span>Transport</span><b>Wi-Fi test</b></div>
+        <div><span>Camera</span><b id="headerCamera">PENDING</b></div>
+      </div>
+    </header>
+
+    <nav class="primary-tabs" aria-label="Dashboard sections">
+      <button class="tab active" data-page="sensors" aria-current="page">Sensors Dashboard</button>
+      <button class="tab" data-page="ai">AI Analytics</button>
+      <button class="tab" data-page="rover">Rover</button>
+      <button class="tab utility" id="refreshButton" type="button">Refresh</button>
+    </nav>
+
+    <main id="main" class="workspace">
+      <section id="sensors" class="page active" aria-labelledby="sensorPageTitle">
+        <div class="page-intro">
+          <div>
+            <p class="kicker">TEST VERSION · LIVE HARDWARE DATA</p>
+            <h2 id="sensorPageTitle">Sensor Operations Dashboard</h2>
+            <p>Live hardware readings from the MineRakshak test rig.</p>
+          </div>
+          <div class="page-intro-status">
+            <span id="backendStatus" class="badge neutral">BACKEND CHECKING</span>
+            <span id="hazardBadge" class="badge neutral">HAZARD UNKNOWN</span>
+          </div>
+        </div>
+
+        <div class="sensor-layout top-layout">
+          <section class="module gas-module" aria-labelledby="gasTitle">
+            <header class="module-head"><h3 id="gasTitle">01. Gas & Air Quality</h3><span>Live gas-response signals</span></header>
+            <div class="card-grid two" id="gasGrid"></div>
+          </section>
+
+          <div class="middle-stack">
+            <section class="module" aria-labelledby="environmentTitle">
+              <header class="module-head"><h3 id="environmentTitle">02. Environmental Conditions</h3><span id="envModuleLabel">HW-611 / I²C</span></header>
+              <div class="metric-row three" id="environmentGrid"></div>
+            </section>
+
+            <section class="module" aria-labelledby="hazardTitle">
+              <header class="module-head"><h3 id="hazardTitle">03. Hazard Detection</h3><span>Immediate physical hazards</span></header>
+              <div class="metric-row three" id="hazardGrid"></div>
+            </section>
+          </div>
+
+          <section class="module" aria-labelledby="presenceTitle">
+            <header class="module-head"><h3 id="presenceTitle">04. Presence & Rover Stability</h3><span>Motion / vibration / IMU status</span></header>
+            <div class="card-grid two" id="presenceGrid"></div>
+          </section>
+        </div>
+
+        <div class="sensor-layout lower-layout">
+          <section class="module connectivity-module" aria-labelledby="connectivityTitle">
+            <header class="module-head"><h3 id="connectivityTitle">05. Connectivity & Camera</h3><span>Current test path</span></header>
+            <div class="connect-list">
+              <div><span>Backend</span><b id="connectBackend">OFFLINE</b></div>
+              <div><span>Wi-Fi RSSI</span><b id="connectWifi">NO DATA</b></div>
+              <div><span>Last ESP32 packet</span><b id="connectPacket">NO DATA</b></div>
+              <div><span>LoRa</span><b class="future">FUTURE OPTION</b></div>
+              <div><span>Rover-kit camera</span><b id="connectCamera">PENDING INTEGRATION</b></div>
+            </div>
+          </section>
+
+          <section class="module imu-module" aria-labelledby="imuTitle">
+            <header class="module-head"><h3 id="imuTitle">06. IMU / Motion Analysis</h3><span id="imuIdentity">Awaiting compatible IMU data</span></header>
+            <div class="imu-summary">
+              <div><span>Acceleration (m/s²)</span><b id="accelSummary">X: — &nbsp; Y: — &nbsp; Z: —</b></div>
+              <div><span>Gyroscope (°/s)</span><b id="gyroSummary">X: — &nbsp; Y: — &nbsp; Z: —</b></div>
+            </div>
+            <div class="chart-grid">
+              <div class="chart-card"><div class="chart-head"><b>Acceleration</b><span>X · Y · Z</span></div><canvas id="accelChart" width="760" height="220" aria-label="Acceleration history chart"></canvas><p id="accelEmpty">No compatible acceleration stream received yet.</p></div>
+              <div class="chart-card"><div class="chart-head"><b>Gyroscope</b><span>X · Y · Z</span></div><canvas id="gyroChart" width="760" height="220" aria-label="Gyroscope history chart"></canvas><p id="gyroEmpty">No compatible gyroscope stream received yet.</p></div>
+              <div class="chart-card vibration-chart"><div class="chart-head"><b>Vibration Events — SW-420</b><span id="vibrationChartState">CLEAR</span></div><canvas id="vibrationChart" width="1520" height="180" aria-label="Vibration detection history chart"></canvas><p id="vibrationEmpty">No vibration history received yet.</p></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="module reference-module" aria-labelledby="referenceTitle">
+          <header class="module-head"><h3 id="referenceTitle">07. Sensor → Role Reference</h3><span>Test rig mapping</span></header>
+          <div class="reference-wrap">
+            <table>
+              <thead><tr><th>Sensor</th><th>ESP32 Pin / Bus</th><th>Dashboard Reading</th><th>Role</th></tr></thead>
+              <tbody>
+                <tr><td>MQ-4</td><td>GPIO 35</td><td>Methane response · raw ADC</td><td>Gas trend indication</td></tr>
+                <tr><td>MQ-7</td><td>GPIO 34</td><td>CO response · raw ADC</td><td>CO trend indication</td></tr>
+                <tr><td>MQ-135</td><td>GPIO 39 / VN</td><td>Air-quality response · raw ADC</td><td>Air-quality trend</td></tr>
+                <tr><td>MQ-3</td><td>GPIO 36 / VP</td><td>VOC / gas response · raw ADC</td><td>Additional gas trend</td></tr>
+                <tr><td>HW-611 / BMP280</td><td>I²C · GPIO 33/32</td><td>Temperature / pressure</td><td>Environmental monitoring</td></tr>
+                <tr><td>DHT22</td><td>GPIO 27</td><td>Humidity</td><td>Humidity monitoring</td></tr>
+                <tr><td>HC-SR04</td><td>TRIG 26 / ECHO 25</td><td>Obstacle distance</td><td>Collision awareness</td></tr>
+                <tr><td>PIR</td><td>GPIO 14</td><td>Detected / clear</td><td>Human presence indication</td></tr>
+                <tr><td>SW-420</td><td>GPIO 13</td><td>Vibration detected / clear</td><td>Impact / vibration indication</td></tr>
+                <tr><td>Water</td><td>GPIO 12</td><td>Detected / clear</td><td>Water presence</td></tr>
+                <tr><td>Flame</td><td>GPIO 2</td><td>Detected / clear</td><td>Fire indication</td></tr>
+                <tr><td>Sound</td><td>GPIO 15 · DO</td><td>DETECTED / CLEAR</td><td>Acoustic event indication</td></tr>
+                <tr><td>IMU</td><td>I²C · GPIO 21/22</td><td>Driver status / motion values</td><td>Rover motion analysis</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+
+      <section id="ai" class="page" aria-labelledby="aiPageTitle">
+        <div class="page-intro ai-intro">
+          <div>
+            <p class="kicker">LIVE SAFETY ANALYTICS · MRR-01</p>
+            <h2 id="aiPageTitle">Safety Analytics & Critical Alerts</h2>
+            <p>Live telemetry is evaluated for gas reference estimates, hazard states, unusual sensor changes, rover stability and connectivity, with clear reasons for every warning.</p>
+          </div>
+          <div class="page-intro-status">
+            <span id="aiEngineBadge" class="badge neutral">ENGINE CHECKING</span>
+            <span id="aiRiskBadge" class="badge neutral">RISK UNKNOWN</span>
+          </div>
+        </div>
+
+        <div class="ai-overview-grid">
+          <section class="module ai-score-module" aria-labelledby="aiScoreTitle">
+            <header class="module-head"><h3 id="aiScoreTitle">01. Live Risk Assessment</h3><span>Current risk + exact causes</span></header>
+            <div class="risk-core">
+              <div id="riskGauge" class="risk-gauge neutral"><strong id="riskScore">0</strong><span>/100</span></div>
+              <div class="risk-copy">
+                <span>Current assessment</span>
+                <h4 id="riskSummary">Waiting for analytics</h4>
+                <p id="riskMethod">Manufacturer gas reference models + safety thresholds + sensor rules + trend analysis</p>
+                <div id="riskDrivers" class="risk-drivers" aria-live="polite"></div>
+                <div id="riskBreakdown" class="risk-breakdown" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="coverage-row">
+              <span>Analysis coverage</span>
+              <div class="coverage-track"><i id="coverageBar"></i></div>
+              <b id="coverageValue">0%</b>
+            </div>
+          </section>
+
+          <section class="module ai-status-module" aria-labelledby="aiStatusTitle">
+            <header class="module-head"><h3 id="aiStatusTitle">02. Analysis Readiness</h3><span>Live inputs currently available to the risk engine</span></header>
+            <div id="aiChecks" class="ai-check-grid"></div>
+          </section>
+        </div>
+
+        <section class="module ai-alert-module" aria-labelledby="aiAlertTitle">
+          <header class="module-head"><h3 id="aiAlertTitle">03. Critical Alerts & Recommendations</h3><span id="aiAlertCount">No alerts</span></header>
+          <div id="aiAlerts" class="ai-alert-list">
+            <div class="ai-empty">Waiting for live analytics data.</div>
+          </div>
+        </section>
+
+        <div class="ai-lower-grid">
+          <section class="module" aria-labelledby="aiTrendTitle">
+            <header class="module-head"><h3 id="aiTrendTitle">04. Gas Concentration & Trend Analysis</h3><span>Manufacturer Rs/R0 reference estimates + live ADC trends</span></header>
+            <div id="gasTrendGrid" class="ai-trend-grid"></div>
+          </section>
+
+          <section class="module" aria-labelledby="aiLimitsTitle">
+            <header class="module-head"><h3 id="aiLimitsTitle">05. Verified Safety Thresholds</h3><span>Regulatory/reference values</span></header>
+            <div class="reference-wrap ai-reference-wrap">
+              <table class="ai-threshold-table">
+                <thead><tr><th>Parameter</th><th>Warning / Action</th><th>Critical</th><th>Emergency</th><th>Applies now?</th></tr></thead>
+                <tbody id="regulatoryThresholds"></tbody>
+              </table>
+              <h4 class="operational-threshold-title">MineRakshak operational rules — not statutory limits</h4>
+              <table class="ai-threshold-table operational-table">
+                <thead><tr><th>Parameter</th><th>Warning</th><th>Critical</th><th>Basis</th></tr></thead>
+                <tbody id="operationalThresholds"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <section class="module ai-method-module" aria-labelledby="aiMethodTitle">
+          <header class="module-head"><h3 id="aiMethodTitle">06. Analysis Logic & Safety References</h3><span>How alerts are generated</span></header>
+          <div class="ai-method-grid">
+            <div>
+              <h4>What the analytics does</h4>
+              <p>It combines live hazard states, manufacturer Rs/R0 gas reference estimates, official concentration thresholds as comparison references, rover-specific collision/stability rules, stale-link checks, ADC saturation checks and short-term gas-response trends.</p>
+              <p><b>Gas model:</b> MQ-4, MQ-7, MQ-135 and MQ-3 use manufacturer-published Rs/R0 sensitivity relationships with the rover’s early clean-air baseline to provide reference concentration estimates. Raw ADC remains visible for traceability.</p>
+            </div>
+            <div>
+              <h4>Official references used</h4>
+              <ul>
+                <li>DGMS mine ventilation rules: inflammable gas ≤1.25% at any place; return-air reference 0.75%; wet-bulb maximum 33.5 °C.</li>
+                <li>DGMS methane monitoring notification: alarm at 1% methane and power cut at 1.25%.</li>
+                <li>DGMS technical guidance: carbon monoxide maximum allowable concentration 50 ppm.</li>
+                <li>NIOSH: CO 35 ppm 8-hour REL, 200 ppm ceiling and 1,200 ppm IDLH.</li>
+                <li>NIOSH/OSHA noise references are shown only as future calibrated-dBA limits; the current sound module is binary.</li>
+              </ul>
+            </div>
+          </div>
+          <div id="aiLimitations" class="ai-limitations"></div>
+        </section>
+      </section>
+
+      <section id="rover" class="page" aria-labelledby="roverPageTitle">
+        <div class="page-intro rover-intro">
+          <div>
+            <p class="kicker">ROVER SYSTEM</p>
+            <h2 id="roverPageTitle">Camera & Rover Control</h2>
+            <p>This area is separated from sensor monitoring because the rover kit handles driving independently.</p>
+          </div>
+          <span id="roverLinkBadge" class="badge neutral">ROVER TELEMETRY OFFLINE</span>
+        </div>
+
+        <div class="rover-layout">
+          <section class="module camera-module">
+            <header class="module-head"><h3>01. Rover Camera</h3><span>Rover-kit camera · integration pending</span></header>
+            <div id="cameraFrame" class="camera-frame">
+              <div class="camera-crosshair" aria-hidden="true"></div>
+              <div class="camera-copy">
+                <b id="cameraTitle">CAMERA STREAM NOT CONNECTED</b>
+                <p id="cameraText">The camera is part of the rover kit, not the ESP32 test stack. We will connect the stream here after confirming the rover camera output/API.</p>
+                <span>Reserved live-view panel</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="module control-module">
+            <header class="module-head"><h3>02. Rover Controls</h3><span>Smorphi app remains source of control</span></header>
+            <div class="control-state">
+              <span class="control-lock">CONTROLLED BY SMORPHI APP</span>
+              <h4>Dashboard driving is intentionally disabled</h4>
+              <p><b>Current prototype control:</b> the rover is driven through the Smorphi App. Dashboard movement remains disabled unless the rover kit exposes a documented and safe command interface.</p>
+            </div>
+            <div class="dpad" aria-label="Future rover controls">
+              <button disabled>↑<small>Forward</small></button>
+              <button disabled>←<small>Left</small></button>
+              <button class="stop" disabled>■<small>Stop</small></button>
+              <button disabled>→<small>Right</small></button>
+              <button disabled>↓<small>Reverse</small></button>
+            </div>
+            <div class="future-note"><b>Future integration path</b><span>Only enable these controls if Smorphi exposes a safe SDK/API or supported command interface.</span></div>
+          </section>
+        </div>
+
+        <section class="module roadmap-module">
+          <header class="module-head"><h3>03. Rover Integration Roadmap</h3><span>Not active in current test build</span></header>
+          <div class="roadmap-grid">
+            <article><span>NOW</span><b>Wi-Fi sensor telemetry</b><p>ESP32 → FastAPI → dashboard.</p></article>
+            <article><span>NEXT</span><b>Rover-kit camera</b><p>Determine camera stream/API and embed it in the Rover tab.</p></article>
+            <article><span>OPTIONAL</span><b>LoRa transport</b><p>Use LoRa later for underground telemetry if the field prototype requires it.</p></article>
+            <article><span>ONLY IF SUPPORTED</span><b>Dashboard rover control</b><p>Integrate only through an official Smorphi command interface.</p></article>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>MineRakshak test console · MRR-01</span>
+      <span id="footerEndpoint">Backend: auto</span>
+    </footer>
+
+    <script type="module" src="js/app.js?v=4.3.0"></script>
+  </body>
+</html>

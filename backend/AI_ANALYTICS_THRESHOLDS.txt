@@ -1,0 +1,42 @@
+MineRakshak AI Analytics Threshold Basis
+========================================
+
+This test build uses an explainable risk engine, not a trained machine-learning model.
+
+Regulatory / official reference values implemented:
+
+1. Methane / inflammable gas (DGMS mine ventilation / methane monitoring references)
+   - 0.75% (7,500 ppm): return-air reference limit in coal mine ventilation rules.
+   - 1.0% (10,000 ppm): alarm reference used in DGMS methane drilling notification.
+   - 1.25% (12,500 ppm): maximum inflammable gas at any place; 1.25% power cut trigger reference.
+   - 5% (50,000 ppm): methane lower explosive limit reference.
+   IMPORTANT: MineRakshak activates these only when calibrated ch4_ppm is supplied. Raw MQ-4 ADC is not ppm.
+
+2. Carbon monoxide
+   - 35 ppm: NIOSH 8-hour recommended exposure limit.
+   - 50 ppm: DGMS maximum allowable concentration reference; also OSHA 8-hour PEL.
+   - 200 ppm: NIOSH ceiling.
+   - 1,200 ppm: NIOSH IDLH.
+   IMPORTANT: MineRakshak activates these only when calibrated co_ppm is supplied. Raw MQ-7 ADC is not ppm.
+
+3. Underground heat (DGMS ventilation reference)
+   - Wet bulb >30.5 C: ventilation with air speed at least 1 m/s required.
+   - Wet bulb >33.5 C: exceeds working-place wet-bulb limit.
+   IMPORTANT: BMP280 supplies dry-bulb temperature, not wet-bulb temperature, so the current test hardware cannot claim heat-limit compliance.
+
+4. Noise reference
+   - NIOSH: 85 dBA 8-hour recommended exposure level.
+   - OSHA: 90 dBA 8-hour PEL; 140 dB peak impulse reference.
+   IMPORTANT: Current sound module is digital DETECTED/CLEAR only and cannot be compared with dBA limits.
+
+Prototype operational rules (NOT statutory limits):
+   - Obstacle warning <=25 cm; danger <=10 cm.
+   - Rover tilt warning >=45 degrees; danger >=70 degrees.
+   - Wi-Fi warning <=-75 dBm; danger <=-85 dBm.
+
+Official sources researched for this build:
+   - Directorate General of Mines Safety (DGMS), mine ventilation regulations / Gazette material.
+   - DGMS methane monitoring/drilling notification: alarm at 1% methane, power cut at 1.25%.
+   - DGMS technical guidance: carbon monoxide maximum allowable concentration 50 ppm.
+   - NIOSH Pocket Guide / IDLH documentation for carbon monoxide.
+   - NIOSH and OSHA occupational noise guidance.
